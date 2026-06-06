@@ -31,7 +31,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define APP_ADDRESS  0x08040000UL   /* Rust app base = FLASH_ACTIVE */
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -48,7 +48,7 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-
+static void JumpToApplication(uint32_t app_address);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -85,7 +85,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   /* USER CODE BEGIN 2 */
-
+  JumpToApplication(APP_ADDRESS);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -145,7 +145,46 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+static void JumpToApplication(uint32_t app_address)
+{
+  typedef void (*pFunction)(void);
 
+  uint32_t app_sp = *((volatile uint32_t *)(app_address));      /* initial MSP */
+  uint32_t app_pc = *((volatile uint32_t *)(app_address + 4U)); /* reset vector */
+  pFunction app_reset_handler = (pFunction)app_pc;
+
+  /* 1. Disable all interrupts */
+  __disable_irq();
+
+  /* 2. Stop SysTick */
+  SysTick->CTRL = 0;
+  SysTick->LOAD = 0;
+  SysTick->VAL  = 0;
+
+  /* 3. Disable & clear all NVIC interrupts */
+  for (uint32_t i = 0; i < 8U; i++) {
+    NVIC->ICER[i] = 0xFFFFFFFFUL;
+    NVIC->ICPR[i] = 0xFFFFFFFFUL;
+  }
+
+  /* 4. De-init HAL/clocks -> back to reset (MSI) so Embassy can reconfigure RCC */
+  HAL_RCC_DeInit();
+  HAL_DeInit();
+
+  /* 5. Relocate vector table to the application */
+  SCB->VTOR = app_address;
+
+  /* 6. Set the application stack pointer */
+  __set_MSP(app_sp);
+
+  /* 7. Barriers, then jump */
+  __DSB();
+  __ISB();
+
+  app_reset_handler();
+
+  while (1) { }  /* never returns */
+}
 /* USER CODE END 4 */
 
 /**
