@@ -177,6 +177,7 @@ static void JumpToApplication(uint32_t app_address)
   /* 6. Set the application stack pointer */
   __set_MSP(app_sp);
 
+  FLASH->ACR = (FLASH->ACR & ~FLASH_ACR_LATENCY) | FLASH_LATENCY_0;
   /* 7. Barriers, then jump */
   __DSB();
   __ISB();
