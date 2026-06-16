@@ -15,8 +15,8 @@
  *    - reads this metadata on reset and decides whether to boot the active
  *      image or trial-boot the pending DFU image.
  *
- * This header intentionally contains definitions only. Step 1 must not change
- * runtime behaviour.
+ * This header intentionally contains definitions only at first, plus helper
+ * declarations used by both repositories.
  */
 
 #define BOOT_STATE_RECORD_MAGIC          0x42535455UL  /* 'BSTU' */
@@ -51,5 +51,21 @@ typedef struct
 
 _Static_assert((sizeof(BootStateRecord_t) % 16U) == 0U,
                "BootStateRecord_t must remain 16-byte aligned in size");
+
+const BootStateRecord_t *BootState_GetRecord(void);
+
+int BootState_IsValidRecord(const BootStateRecord_t *record);
+
+int BootState_IsPendingUpdate(const BootStateRecord_t *record);
+
+int BootState_IsTrialBoot(const BootStateRecord_t *record);
+
+int BootState_IsConfirmed(const BootStateRecord_t *record);
+
+int BootState_IsPendingImageSizeValid(uint32_t image_size);
+
+BootStateRecord_t BootState_MakeUpdatePendingRecord(uint32_t pending_version,
+                                                    uint32_t pending_size,
+                                                    uint32_t pending_crc);
 
 #endif /* BOOT_STATE_H */
