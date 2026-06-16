@@ -91,3 +91,45 @@ BootStateRecord_t BootState_MakeUpdatePendingRecord(uint32_t pending_version,
 
     return record;
 }
+
+int BootState_IsAddressInSram(uint32_t address)
+{
+    /*
+     * STM32U5A5 SRAM range should be checked against the exact memory map.
+     * This broad check accepts normal Cortex-M SRAM addresses.
+     */
+    return ((address & 0x2FFE0000UL) == 0x20000000UL);
+}
+
+int BootState_IsAddressInFlash(uint32_t address)
+{
+    return (address >= ADDR_BOOTLOADER) &&
+           (address < (ADDR_BOOTLOADER + (2U * 1024U * 1024U)));
+}
+
+int BootState_IsValidImageVectorTable(uint32_t image_addr)
+{
+    uint32_t initial_sp = *(const volatile uint32_t *)image_addr;
+    uint32_t reset_pc   = *(const volatile uint32_t *)(image_addr + 4U);
+
+    if (!BootState_IsAddressInSram(initial_sp))
+    {
+        return 0;
+    }
+
+    if (!BootState_IsAddressInFlash(reset_pc))
+    {
+        return 0;
+    }
+
+    /*
+     * Cortex-M reset handler address should normally have bit 0 set to indicate
+     * Thumb state.
+     */
+    if ((reset_pc & 0x1U) == 0U)
+    {
+        return 0;
+    }
+
+    return 1;
+}
