@@ -67,5 +67,9 @@ int BootState_IsPendingImageSizeValid(uint32_t image_size);
 BootStateRecord_t BootState_MakeUpdatePendingRecord(uint32_t pending_version,
                                                     uint32_t pending_size,
                                                     uint32_t pending_crc);
+int BootState_IsAddressInSram(uint32_t address);
 
+int BootState_IsAddressInFlash(uint32_t address);
+
+int BootState_IsValidImageVectorTable(uint32_t image_addr);
 #endif /* BOOT_STATE_H */
