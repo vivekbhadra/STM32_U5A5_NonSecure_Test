@@ -181,18 +181,10 @@ static void JumpToApplication(uint32_t app_address) {
     NVIC->ICPR[i] = 0xFFFFFFFFUL;
   }
 
-  /* 3b. Disable ICACHE while HAL is still up */
-  HAL_ICACHE_Disable();
-
-  /* 4. De-init HAL/clocks -> back to reset (MSI) so Embassy can reconfigure RCC
+  /* 4. De-init HAL/clocks -> back to reset MSI so Embassy can reconfigure RCC
    */
   HAL_RCC_DeInit();
   HAL_DeInit();
-
-  /* 4b. Restore voltage scaling to RANGE1 for the app's 100 MHz PLL */
-  HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1);
-  while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {
-  }
 
   /* 5. Relocate vector table to the application */
   SCB->VTOR = app_address;
@@ -200,17 +192,7 @@ static void JumpToApplication(uint32_t app_address) {
   /* 6. Set the application stack pointer */
   __set_MSP(app_sp);
 
-  /* 6b. Mirror the Rust bootloader's special-register clearing */
-  __set_BASEPRI(0);
-  __set_CONTROL(0);
-  __ISB();
-  __set_FAULTMASK(0);
-
   FLASH->ACR = (FLASH->ACR & ~FLASH_ACR_LATENCY) | FLASH_LATENCY_0;
-
-  /* 6c. Re-enable interrupts so the app starts with PRIMASK=0,   <-- ADD THIS
-   *     exactly as the Rust bootloader does with `cpsie i` before `bx`. */
-  __enable_irq();
 
   /* 7. Barriers, then jump */
   __DSB();
@@ -219,7 +201,7 @@ static void JumpToApplication(uint32_t app_address) {
   app_reset_handler();
 
   while (1) {
-  } /* never returns */
+  }
 }
 /* USER CODE END 4 */
 
