@@ -208,6 +208,10 @@ static void JumpToApplication(uint32_t app_address) {
 
   FLASH->ACR = (FLASH->ACR & ~FLASH_ACR_LATENCY) | FLASH_LATENCY_0;
 
+  /* 6c. Re-enable interrupts so the app starts with PRIMASK=0,   <-- ADD THIS
+   *     exactly as the Rust bootloader does with `cpsie i` before `bx`. */
+  __enable_irq();
+
   /* 7. Barriers, then jump */
   __DSB();
   __ISB();
