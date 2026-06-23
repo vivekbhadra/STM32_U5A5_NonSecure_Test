@@ -160,45 +160,59 @@ void SystemClock_Config(void) {
 
 /* USER CODE BEGIN 4 */
 static void JumpToApplication(uint32_t app_address) {
-  typedef void (*pFunction)(void);
+  uint32_t app_sp = *((volatile uint32_t *)(app_address));
+  uint32_t app_pc = *((volatile uint32_t *)(app_address + 4U));
+  uint32_t app_reset_addr = app_pc & ~1UL;
 
-  uint32_t app_sp = *((volatile uint32_t *)(app_address)); /* initial MSP */
-  uint32_t app_pc =
-      *((volatile uint32_t *)(app_address + 4U)); /* reset vector */
-  pFunction app_reset_handler = (pFunction)app_pc;
+  /* Basic image validation before touching the handoff state. */
+  if ((app_sp < 0x20000000UL) || (app_sp > 0x20020000UL) ||
+      ((app_sp & 0x7UL) != 0UL)) {
+    Error_Handler();
+  }
 
-  /* 1. Disable all interrupts */
+  if (((app_pc & 0x1UL) == 0UL) || (app_reset_addr < app_address) ||
+      (app_reset_addr >= (app_address + (768UL * 1024UL)))) {
+    Error_Handler();
+  }
+
+  /*
+   * Match the working Rust bootloader handoff:
+   * - temporarily mask interrupts during cleanup
+   * - stop SysTick
+   * - disable and clear pending NVIC interrupts
+   * - set VTOR to the application vector table
+   * - clear CONTROL, BASEPRI, FAULTMASK
+   * - load the application's MSP
+   * - re-enable normal interrupts
+   * - branch directly to the application reset handler
+   *
+   * Do not call HAL_RCC_DeInit(), HAL_DeInit(), or change FLASH latency here.
+   * The working Rust bootloader does not do those operations during handoff.
+   */
   __disable_irq();
 
-  /* 2. Stop SysTick */
-  SysTick->CTRL = 0;
-  SysTick->LOAD = 0;
-  SysTick->VAL = 0;
+  SysTick->CTRL = 0U;
+  SysTick->LOAD = 0U;
+  SysTick->VAL = 0U;
 
-  /* 3. Disable & clear all NVIC interrupts */
-  for (uint32_t i = 0; i < 8U; i++) {
+  for (uint32_t i = 0U; i < 8U; i++) {
     NVIC->ICER[i] = 0xFFFFFFFFUL;
     NVIC->ICPR[i] = 0xFFFFFFFFUL;
   }
 
-  /* 4. De-init HAL/clocks -> back to reset MSI so Embassy can reconfigure RCC
-   */
-  HAL_RCC_DeInit();
-  HAL_DeInit();
-
-  /* 5. Relocate vector table to the application */
   SCB->VTOR = app_address;
 
-  /* 6. Set the application stack pointer */
-  __set_MSP(app_sp);
-
-  FLASH->ACR = (FLASH->ACR & ~FLASH_ACR_LATENCY) | FLASH_LATENCY_0;
-
-  /* 7. Barriers, then jump */
-  __DSB();
-  __ISB();
-
-  app_reset_handler();
+  __asm volatile("msr control, %[zero]\n"
+                 "msr basepri, %[zero]\n"
+                 "msr faultmask, %[zero]\n"
+                 "msr msp, %[app_sp]\n"
+                 "dsb\n"
+                 "isb\n"
+                 "cpsie i\n"
+                 "bx %[app_pc]\n"
+                 :
+                 : [zero] "r"(0UL), [app_sp] "r"(app_sp), [app_pc] "r"(app_pc)
+                 : "memory");
 
   while (1) {
   }
