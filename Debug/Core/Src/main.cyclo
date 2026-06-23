@@ -1,0 +1,4 @@
+../Core/Src/main.c:82:5:main	1
+../Core/Src/main.c:124:6:SystemClock_Config	4
+../Core/Src/main.c:162:13:JumpToApplication	8
+../Core/Src/main.c:226:6:Error_Handler	1

@@ -60,8 +60,8 @@ all: main-build
 main-build: U5A5_NonSecure_Test.elf secondary-outputs
 
 # Tool invocations
-U5A5_NonSecure_Test.elf U5A5_NonSecure_Test.map: $(OBJS) $(USER_OBJS) /Users/vivek.bhadra-ext/Documents/U5A5_NonSecure_Test/STM32U5A5ZJTXQ_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "U5A5_NonSecure_Test.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m33 -T"/Users/vivek.bhadra-ext/Documents/U5A5_NonSecure_Test/STM32U5A5ZJTXQ_FLASH.ld" --specs=nosys.specs -Wl,-Map="U5A5_NonSecure_Test.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv5-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+U5A5_NonSecure_Test.elf U5A5_NonSecure_Test.map: $(OBJS) $(USER_OBJS) /Users/vivek.bhadra-ext/Documents/STM32U5A5_NonSec_C_BL_Rust_Async/STM32U5A5ZJTXQ_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "U5A5_NonSecure_Test.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m33 -T"/Users/vivek.bhadra-ext/Documents/STM32U5A5_NonSec_C_BL_Rust_Async/STM32U5A5ZJTXQ_FLASH.ld" --specs=nosys.specs -Wl,-Map="U5A5_NonSecure_Test.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv5-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
